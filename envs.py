@@ -250,9 +250,10 @@ class OrcaYamBimanual(BaseOrcaHandEnv):
     """Two I2RT YAM arms, each with an ORCA hand on its flange.
 
     Action layout (model order): the 34 hand position actuators first (17 left,
-    17 right), then the 10 arm position actuators (5 left, 5 right). In phase 1
-    the arm actuators just hold a home pose while the hands are teleoperated;
-    ``sim_common.ActuatorMap`` recovers the (side, joint) of every actuator.
+    17 right), then the 12 arm position actuators (6 left, 6 right -- arm_j1..j5
+    plus the wrist-roll arm_j6 at the flange). In phase 1 the arm actuators just
+    hold a home pose while the hands are teleoperated; ``sim_common.ActuatorMap``
+    recovers the (side, joint) of every actuator.
     """
 
     def __init__(

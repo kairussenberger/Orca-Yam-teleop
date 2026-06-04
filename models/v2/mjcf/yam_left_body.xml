@@ -44,7 +44,18 @@
                    pos = circle - Ry(pi)*square. euler "0 pi 0" = 180deg roll about
                    the finger axis -> palm-DOWN, thumb-INWARD at -X home (right arm
                    uses euler 0 to match). -->
+              <!-- Wrist-roll joint (the joint cut from the supplied URDF): the
+                   hand spins on link5's circular flange instead of being welded.
+                   axis (0 1 0) = the flange normal in the link5 frame (mesh-
+                   measured: +Y), which euler "0 pi 0" leaves as +Y in this body
+                   frame too. pos = flange/circle center expressed in this rotated
+                   frame = the tower square center, so the hand rotates TRUE on the
+                   flange (not orbiting an offset axis). j6=0 is the welded
+                   reference, preserving the verified flush 0.00mm contact. Range
+                   is a PLACEHOLDER (+/-180deg) -> refine to the real YAM wrist
+                   limit; harmless in phase 1 since j6 holds home (0). -->
               <body name="left_hand_mount" pos="-0.0504 0.1078 0" euler="0 3.14159 0">
+                <joint name="left_arm_j6" axis="0 1 0" pos="-0.0099 -0.058 0" range="-3.14159 3.14159"/>
                 <include file="orcahand_left_body.xml"/>
               </body>
             </body>

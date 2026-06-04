@@ -3,11 +3,12 @@
 
      Composition mirrors scene_combined.xml: shared scene/options, the two hand
      asset+actuator mjcfs, plus the two arm asset+actuator mjcfs. Each arm body
-     (yam_*_body.xml) nests its ORCA hand body at the flange, so one model holds
-     2 arms (5 joints each) + 2 hands (17 actuators each).
+     (yam_*_body.xml) nests its ORCA hand body at the flange via a wrist-roll
+     joint, so one model holds 2 arms (6 joints each: 5 URDF + the wrist-roll j6
+     at the flange) + 2 hands (17 actuators each).
 
      PHASE 1 = hands-only teleop: the 34 hand actuators are driven from the
-     webcam; the 10 arm actuators just hold a home pose (default ctrl 0).
+     webcam; the 12 arm actuators just hold a home pose (default ctrl 0).
 
      PLACEHOLDERS waiting on real measurements:
        * arm base pose per side (below)            -> user item #3

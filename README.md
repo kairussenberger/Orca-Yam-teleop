@@ -16,7 +16,7 @@ folders/files below back to the matching path under
 | here | → orca_sim path | what it is |
 |---|---|---|
 | `scenes/v2/bimanual_yam.xml` | `scenes/v2/` | top scene: composes options+scene+2 hands+2 arms; **arm base poses** |
-| `models/v2/mjcf/yam_left.mjcf` | `models/v2/mjcf/` | left arm: mesh assets + 5 position actuators (kp600/kv30) |
+| `models/v2/mjcf/yam_left.mjcf` | `models/v2/mjcf/` | left arm: mesh assets + 6 position actuators (kp600/kv30, incl. wrist-roll j6) |
 | `models/v2/mjcf/yam_left_body.xml` | `models/v2/mjcf/` | left arm body tree + **left hand mount** |
 | `models/v2/mjcf/yam_right.mjcf` | `models/v2/mjcf/` | right arm: assets + actuators (de-mirrored → real meshes) |
 | `models/v2/mjcf/yam_right_body.xml` | `models/v2/mjcf/` | right arm body tree (de-mirrored) + **right hand mount** |

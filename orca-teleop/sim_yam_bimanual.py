@@ -2,8 +2,8 @@
 """Bimanual webcam teleop -> two ORCA hands mounted on two I2RT YAM arms.
 
 Phase 1 (hands-only): the 34 ORCA-hand actuators are driven from the webcam
-exactly as in sim_bimanual.py; the 10 YAM arm actuators are held at a home pose
-by an ``ArmController`` stub. Swap a real arm input (GELLO leader arms, VR 6-DoF
+exactly as in sim_bimanual.py; the 12 YAM arm actuators (6/side incl. the
+wrist-roll j6) are held at a home pose by an ``ArmController`` stub. Swap a real arm input (GELLO leader arms, VR 6-DoF
 -> IK, full-body pose) into ``ArmController`` later without touching the hand
 path -- ``build_action`` routes each actuator by (side, joint) from the model.
 
@@ -38,9 +38,11 @@ import webcam_teleop as wt
 # thumbs out — the two arms are 180deg-about-Z copies, not mirrors, so hand
 # chirality is "crossed" vs naming). NB j1 range is [0,2pi] so a -90deg base is
 # +270deg=4.7124. (Teleop L/R may then need run_yam's --swap-hands.)
+# arm_j6 is the wrist-roll added at the link5 flange; home 0 = the welded
+# reference (preserves the verified flush hand contact) until phase-2 IK drives it.
 HOME_POSE = {
-    "left":  {"arm_j1": 1.5708, "arm_j2": 0.0, "arm_j3": 0.0, "arm_j4": 0.0, "arm_j5": 0.0},
-    "right": {"arm_j1": 4.7124, "arm_j2": 0.0, "arm_j3": 0.0, "arm_j4": 0.0, "arm_j5": 0.0},
+    "left":  {"arm_j1": 1.5708, "arm_j2": 0.0, "arm_j3": 0.0, "arm_j4": 0.0, "arm_j5": 0.0, "arm_j6": 0.0},
+    "right": {"arm_j1": 4.7124, "arm_j2": 0.0, "arm_j3": 0.0, "arm_j4": 0.0, "arm_j5": 0.0, "arm_j6": 0.0},
 }
 
 
@@ -67,7 +69,7 @@ class ArmController:
 
     def __init__(self, arm_joints: list[tuple[str, str]], home: dict | None = None) -> None:
         # arm_joints comes from the model (e.g. [('left','arm_j1'), ...]), so the
-        # DoF count is whatever the URDF has (5 today, 6 if a wrist joint is added).
+        # DoF count is whatever the model has (6 today: j1..j5 + the wrist-roll j6).
         self.home: dict[tuple[str, str], float] = {sj: 0.0 for sj in arm_joints}
         if home:
             self.home.update(home)
@@ -110,8 +112,8 @@ def run_selftest(args) -> int:
     nleft_h = sum(1 for k in hand_idx if amap.sides[k] == "left")
     print(f"actuators: {env.model.nu} | hand={nhand} (left {nleft_h}/right {nhand-nleft_h}) "
           f"| arm={narm} {sorted(arm_joints)}")
-    if not (nhand == 34 and narm == 10):
-        env.close(); print("SELFTEST: FAIL (expected 34 hand + 10 arm)"); return 1
+    if not (nhand == 34 and narm == 12):
+        env.close(); print("SELFTEST: FAIL (expected 34 hand + 12 arm)"); return 1
 
     # synthetic fist for BOTH hands; arms at home
     fist = {}

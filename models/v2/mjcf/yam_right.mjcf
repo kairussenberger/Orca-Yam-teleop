@@ -21,5 +21,8 @@
     <position name="right_arm_j3_actuator" joint="right_arm_j3" kp="600" kv="30" forcerange="-300 300" ctrlrange="-1.396263 2.443461"/>
     <position name="right_arm_j4_actuator" joint="right_arm_j4" kp="600" kv="30" forcerange="-300 300" ctrlrange="-1.570796 1.570796"/>
     <position name="right_arm_j5_actuator" joint="right_arm_j5" kp="600" kv="30" forcerange="-300 300" ctrlrange="-1.570796 1.570796"/>
+    <!-- wrist-roll (j6): the flange joint cut from the URDF. Stiff servo holds
+         the hand against gravity at home; ctrlrange = joint range (placeholder). -->
+    <position name="right_arm_j6_actuator" joint="right_arm_j6" kp="600" kv="30" forcerange="-300 300" ctrlrange="-3.14159 3.14159"/>
   </actuator>
 </mujoco>
