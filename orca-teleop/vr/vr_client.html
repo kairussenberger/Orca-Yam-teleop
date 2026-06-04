@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<!--
+  WebXR wrist-pose streamer for the bimanual YAM teleop (phase 2, orientation-only).
+
+  Runs in the Meta Quest Browser. Uses HAND TRACKING (no controllers): each XR
+  animation frame it reads the WRIST joint pose of each tracked hand and streams
+  the orientation quaternion (+ position, for later) over a secure WebSocket to the
+  Python server on the laptop (vr_teleop.py), which maps it to the arm wrist joints.
+
+  WebXR needs a secure context, so the page is served over HTTPS with a self-signed
+  cert (accept the browser warning once); the WebSocket is wss:// on the SAME origin,
+  so one cert-accept covers both. Prefers 'immersive-ar' (passthrough) so you can see
+  the room / laptop while teleoperating; falls back to 'immersive-vr'.
+-->
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>YAM wrist teleop</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background:#111; color:#eee; margin:0; padding:24px; }
+    h1 { font-size:20px; } #status { font-size:16px; margin:12px 0; white-space:pre-line; }
+    button { font-size:20px; padding:14px 22px; border-radius:10px; border:0; background:#3b82f6; color:#fff; }
+    button:disabled { background:#555; } .ok{color:#34d399} .bad{color:#f87171} .warn{color:#fbbf24}
+  </style>
+</head>
+<body>
+  <h1>YAM wrist teleop &mdash; WebXR streamer</h1>
+  <div id="status">initializing&hellip;</div>
+  <button id="enter" disabled>Enter teleop</button>
+  <canvas id="gl" style="display:none"></canvas>
+
+<script>
+const statusEl = document.getElementById('status');
+const enterBtn = document.getElementById('enter');
+let ws = null, wsReady = false;
+function setStatus(msg, cls) { statusEl.innerHTML = `<span class="${cls||''}">${msg}</span>`; }
+
+// ---- WebSocket (same origin as this https page -> wss, one cert covers both) ----
+function connectWS() {
+  ws = new WebSocket(`wss://${location.host}/ws`);
+  ws.onopen  = () => { wsReady = true;  setStatus('socket connected. Put the headset on, show both hands, then Enter teleop.', 'ok'); };
+  ws.onclose = () => { wsReady = false; setStatus('socket closed &mdash; retrying&hellip;', 'warn'); setTimeout(connectWS, 1000); };
+  ws.onerror = () => { setStatus('socket error (accept the cert for this page first?)', 'bad'); };
+}
+connectWS();
+
+// ---- WebXR setup ----
+let xrSession = null, xrRefSpace = null, gl = null;
+let lastSent = 0;                       // throttle clock (ms)
+const SEND_HZ = 50;
+
+async function start() {
+  if (!navigator.xr) { setStatus('navigator.xr missing &mdash; open this in the Meta Quest Browser.', 'bad'); return; }
+  // Prefer AR passthrough (see the room/laptop); fall back to VR.
+  let mode = 'immersive-ar';
+  if (!(await navigator.xr.isSessionSupported('immersive-ar'))) {
+    mode = (await navigator.xr.isSessionSupported('immersive-vr')) ? 'immersive-vr' : null;
+  }
+  if (!mode) { setStatus('No immersive XR support on this browser.', 'bad'); return; }
+
+  const canvas = document.getElementById('gl');
+  gl = canvas.getContext('webgl', { xrCompatible: true });
+  try {
+    xrSession = await navigator.xr.requestSession(mode, {
+      requiredFeatures: ['hand-tracking'],   // fail loudly if hand tracking is unavailable
+      optionalFeatures: ['local-floor'],
+    });
+  } catch (e) { setStatus('requestSession failed: ' + e, 'bad'); return; }
+
+  await gl.makeXRCompatible();
+  xrSession.updateRenderState({ baseLayer: new XRWebGLLayer(xrSession, gl) });
+  try { xrRefSpace = await xrSession.requestReferenceSpace('local-floor'); }
+  catch (e) { xrRefSpace = await xrSession.requestReferenceSpace('local'); }
+
+  xrSession.addEventListener('end', () => { xrSession = null; setStatus('session ended.', 'warn'); });
+  setStatus(`in ${mode}. Streaming wrist pose. Take off / glance at the laptop to watch the arms.`, 'ok');
+  xrSession.requestAnimationFrame(onXRFrame);
+}
+
+function onXRFrame(t, frame) {
+  const session = frame.session;
+  session.requestAnimationFrame(onXRFrame);
+
+  // clear the framebuffer (required to keep the compositor happy; nothing rendered)
+  const layer = session.renderState.baseLayer;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
+  gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+  if (!wsReady) return;
+  const now = t;
+  if (now - lastSent < 1000 / SEND_HZ) return;   // throttle
+  lastSent = now;
+
+  const msg = { l: null, r: null };
+  for (const src of session.inputSources) {
+    if (!src.hand) continue;                       // hand tracking only
+    const wrist = src.hand.get('wrist');
+    if (!wrist) continue;
+    const jp = frame.getJointPose(wrist, xrRefSpace);
+    if (!jp) continue;
+    const o = jp.transform.orientation, p = jp.transform.position;
+    const entry = { q: [o.x, o.y, o.z, o.w], p: [p.x, p.y, p.z] };
+    if (src.handedness === 'left')  msg.l = entry;
+    if (src.handedness === 'right') msg.r = entry;
+  }
+  // Always send (even {l:null,r:null}) so the laptop distinguishes "connected, 0
+  // hands tracked" from "socket dead" -- key for debugging "nothing moved".
+  try { ws.send(JSON.stringify(msg)); } catch (e) {}
+}
+
+if (navigator.xr) {
+  enterBtn.disabled = false;          // start() picks AR/VR and reports if unsupported
+} else {
+  setStatus('navigator.xr missing &mdash; open this page in the Meta Quest Browser.', 'bad');
+}
+enterBtn.addEventListener('click', start);
+</script>
+</body>
+</html>

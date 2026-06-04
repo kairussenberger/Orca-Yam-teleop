@@ -29,14 +29,31 @@ folders/files below back to the matching path under
 
 ### `orca-teleop/` (snapshot of the teleop side)
 - `sim_yam_bimanual.py` — **the driver**. Per-side `HOME_POSE` facing forward −X
-  (`left arm_j1=1.5708`, `right arm_j1=4.7124`; j2–j5=0 → palms-down/thumbs-in),
+  (`left arm_j1=1.5708`, `right arm_j1=4.7124`; j2–j6=0 → palms-down/thumbs-in),
   `ArmController` stub, `home_targets`/`home_qpos`, `build_action`, selftest.
+  Now also carries the **phase-2 arm-teleop run loops**: `--vr`/`--vr-selftest`
+  (WebXR wrist) and `--orbit`/`--orbit-selftest` (ORBIT Quest app → IK).
 - `run_yam.sh` — launcher: `./run_yam.sh --demo | --selftest | --swap-hands`.
 - `sim_common.py` — model-derived `ActuatorMap` + realtime stepper (`parse_sim_name`
   extended to pass through arm joints like `arm_j1`).
 - `sim_bimanual.py` — hand config loading + retargeting (reused by the driver).
 - `sim_teleop.py`, `solve_pinches.py`, `run_sim.sh` — single-hand teleop + IK solve
   (`solve_pinches` damped-least-squares is reusable for phase-2 arm IK).
+
+**Phase-2 VR arm teleop (built + headless-verified 2026-06-04; not yet on hardware):**
+- `vr_ik.py` — `ArmIK`: 6-DoF damped-least-squares pose solver (EE = `{side}_hand_mount`,
+  `mj_jacBody` + `mju_quat2Vel`, warm-started). Frame-agnostic; selftest PASS.
+- `vr_zmq.py` — `OrbitWristReader` (ZeroMQ PULL bind per wrist port + drain-to-newest),
+  `parse_wrist` CSV, Unity LH→RH frame fix (`M_rh = S·M·S`), `PoseRetargeter`
+  (delta-anchored target `M_robot0·inv(M_vr0)·M_vr_now`), `PoseSmoother` (EMA+nlerp).
+- `vr_teleop.py` — WebXR path: cert gen, `VRReceiver` (one port serves the https page
+  + wss), quat helpers, `WristMapper` (rotvec → wrist joints), `VRArmController`.
+- `vr/vr_client.html` — Quest-browser WebXR client (hand-tracking, sends wrist pose over wss).
+- `run_yam_orbit.sh` — launcher for the ORBIT (Quest app + ZMQ) path.
+- `run_yam_vr.sh` — launcher for the WebXR path.
+> The ORBIT path is preferred (native XR Hands + USB adb-reverse); WebXR is the
+> fallback that needs no Quest dev-mode/ownership. See the run section below.
+
 > These live in your **`alerest285/orca-teleop`** repo — this is a **snapshot**.
 > Commit them in the repo for the canonical version. The driver also needs
 > `webcam_teleop.py` (unchanged, in the repo) at runtime.
@@ -102,14 +119,24 @@ Needed for the scene to load (the YAM bodies `<include>` the hand bodies):
 cd ~/Desktop/orca-teleop && ./run_yam.sh --demo      # viewer; arms hold home, hands sweep
 ./run_yam.sh --selftest                               # headless check
 # add --swap-hands when wiring teleop (L/R hands are on crossed sides)
+
+# Phase-2 VR arm teleop (wrist pose → IK):
+./run_yam_orbit.sh                                    # ORBIT Quest app over ZeroMQ (preferred)
+./run_yam_vr.sh                                       # WebXR fallback (Quest browser → wss)
+.venv/bin/python sim_yam_bimanual.py --orbit-selftest # headless ORBIT pipeline check
+.venv/bin/python sim_yam_bimanual.py --vr-selftest    # headless WebXR check
 ```
 Note: `run_yam.sh` hardcodes `$HOME/Desktop/orca_sim/src` — if you move the
 project, fix that path.
 
 ## Open / next
 
-- **Phase-2 arm control**: swap real teleop (GELLO/VR → IK) into the
-  `ArmController` stub in `sim_yam_bimanual.py`. IK can reuse the damped
-  least-squares solve in `solve_pinches.py`.
+- **Phase-2 arm control — BUILT (headless-verified, not yet on hardware).**
+  Wrist pose → 6-DoF DLS IK is implemented in `vr_ik.py` + `vr_zmq.py`, driven by
+  `sim_yam_bimanual.py --orbit` (ORBIT Quest app over ZeroMQ, preferred) or `--vr`
+  (WebXR fallback). Both `--orbit-selftest`/`--vr-selftest` PASS headless.
+  Remaining: validate on the real Quest (ORBIT needs the headset owner to clear the
+  USB-debugging prompt; chirality/scale/jitter knobs are `--orbit-{flip,scale,smooth}`).
+- Next: Quest finger keypoints → 17-DoF ORCA retargeting, and a camera-return stream.
 - Hand contact is **flush-at-flange**; re-derive only if a specific non-flush
   adapter offset surfaces.
