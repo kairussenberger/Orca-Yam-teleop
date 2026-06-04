@@ -137,6 +137,19 @@
     </collision>
   </link>
 
+  <!-- 6th DoF: wrist-roll at the link5 flange (= arm_j6 in the MJCF). Omitted from
+       the original 5-DoF CAD export (the hand was rigidly fixed to link5); restored
+       here so the URDF is a true 6-DoF arm. 'link6' is the rotating wrist flange the
+       hand bolts onto -- it has no separate mesh (the flange housing is part of
+       link5_v1_1.stl), so it carries only a small placeholder inertial. -->
+  <link name="link6">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="1e-05" iyy="1e-05" izz="1e-05" ixy="0" iyz="0" ixz="0"/>
+    </inertial>
+  </link>
+
   <joint name="base_link1" type="revolute">
     <origin xyz="0.066479 -0.060421 -0.016708" rpy="0 0 0"/>
     <parent link="base_link"/>
@@ -175,6 +188,18 @@
     <child link="link5_v1_1"/>
     <axis xyz="-1.0 0.0 0.0"/>
     <limit upper="1.570796" lower="-1.570796" effort="100" velocity="100"/>
+  </joint>
+
+  <!-- link5 -> link6 wrist-roll (arm j6). origin = link5 circular-flange centre
+       (-40.5, 49.8, 0) mm in the link5 frame; axis = flange normal (+Y). Matches the
+       MJCF arm_j6 rotation 1:1. Range is a PLACEHOLDER (+/-pi) -> refine to the real
+       YAM wrist limit. -->
+  <joint name="link5_link6" type="revolute">
+    <origin xyz="-0.0405 0.0498 0" rpy="0 0 0"/>
+    <parent link="link5_v1_1"/>
+    <child link="link6"/>
+    <axis xyz="0.0 1.0 0.0"/>
+    <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
   </joint>
 
 </robot>
