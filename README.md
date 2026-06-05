@@ -20,7 +20,7 @@ folders/files below back to the matching path under
 | `models/v2/mjcf/yam_left_body.xml` | `models/v2/mjcf/` | left arm body tree + **left hand mount** |
 | `models/v2/mjcf/yam_right.mjcf` | `models/v2/mjcf/` | right arm: assets + actuators (de-mirrored → real meshes) |
 | `models/v2/mjcf/yam_right_body.xml` | `models/v2/mjcf/` | right arm body tree (de-mirrored) + **right hand mount** |
-| `models/v2/assets/stand/frame_part{0,1}.stl` | `models/v2/assets/stand/` | the AgileX Ranger 60×60 stand, split in 2 (MuJoCo 200k-tri limit) |
+| `models/v2/assets/stand/frame_part{0..5}.stl` | `models/v2/assets/stand/` | the **elongated** (1230 mm tall) AgileX Ranger 60×60 stand, split in 6 (MuJoCo 200k-tri limit) |
 | `models/v2/assets/yam/*.stl` | `models/v2/assets/yam/` | the YAM arm link meshes (see note on `_mirror` below) |
 | `__init__.py`, `envs.py`, `registry.py` | `src/orca_sim/` | **modified** package files: `OrcaYamBimanual` env + `-v2` registration + export |
 | `orca-teleop/*` | `~/Desktop/orca-teleop/` | teleop driver + launcher + support (snapshot — see note) |
@@ -67,16 +67,20 @@ folders/files below back to the matching path under
 
 ## Key parameters (the values that took work to find)
 
-**Stand / frame** — `Assembly Frame 60x60 for Agilex Robotics Ranger.stl`, ~213k
-tris, mm. Split into `frame_part{0,1}.stl` (~107k each, full fidelity) because
-MuJoCo caps a mesh at 200k tris. Placed in the scene at **z = +0.2475 m** (feet
-on floor), visual-only.
+**Stand / frame** — the **elongated** `Assembly Frame 60x60 for Agilex Robotics
+Ranger` (2026-06-05): same 270×400 mm footprint, but **1230 mm tall (+500 mm vs
+the old 730 mm)** so the arms ride high enough that the hands clear the floor.
+~1.05M tris, mm. Split into `frame_part{0..5}.stl` (~176k each, full fidelity)
+because MuJoCo caps a mesh at 200k tris. Placed in the scene at **pos
+`0.0017 -0.0210 0.2139`** (feet on floor; the tiny XY offset re-aligns the new
+export's mount faces onto where the old frame's were), visual-only.
 
 **Arm base poses** (in `scenes/v2/bimanual_yam.xml`) — recovered by ICP-registering
 the YAM `base_link` mesh onto the CAD assembly (`assembly example both arms.stl`),
-RMS ~1.3–1.6 mm. quat = `w x y z`:
-- `left_arm_base`  pos `-0.0248 -0.1700 0.6908`  quat `0.49791 0.50194 -0.50011 -0.50004`  (joint-1 axis → world −Y)
-- `right_arm_base` pos `0.0101 0.0801 0.6875`    quat `0.49989 0.49988 0.50055 0.49968`    (joint-1 axis → world +Y; = left rotated 180° about Z)
+RMS ~1.3–1.6 mm. quat = `w x y z`. Both z were raised **+0.5 m** (0.69 → 1.19) to
+track the elongated frame's mount; XY/quat are unchanged:
+- `left_arm_base`  pos `-0.0248 -0.1700 1.1908`  quat `0.49791 0.50194 -0.50011 -0.50004`  (joint-1 axis → world −Y)
+- `right_arm_base` pos `0.0101 0.0801 1.1875`    quat `0.49989 0.49988 0.50055 0.49968`    (joint-1 axis → world +Y; = left rotated 180° about Z)
 
 Each arm points world **+Z (up) at q=0**; the per-side home pose (in the driver,
 see below) swings them to face forward.

@@ -24,12 +24,18 @@
   <include file="../../models/v2/mjcf/yam_left.mjcf"/>
   <include file="../../models/v2/mjcf/yam_right.mjcf"/>
 
-  <!-- Real stand: "Assembly Frame 60x60 for Agilex Robotics Ranger". One STL,
-       213k tris > MuJoCo's 200k limit, so it is split into two visual sub-meshes
-       (full fidelity, no decimation). mm -> m via scale. -->
+  <!-- Real stand: the ELONGATED "Assembly Frame 60x60 for Agilex Robotics Ranger"
+       (same 270x400 mm footprint as before, but 1230 mm tall = +500 mm vs the old
+       730 mm version, so the arms ride high enough that the hands clear the floor).
+       One STL, 1.05M tris >> MuJoCo's 200k/mesh limit, so it is split into six
+       visual sub-meshes (full fidelity, no decimation). mm -> m via scale. -->
   <asset>
     <mesh name="stand_part0" file="../../models/v2/assets/stand/frame_part0.stl" scale="0.001 0.001 0.001"/>
     <mesh name="stand_part1" file="../../models/v2/assets/stand/frame_part1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="stand_part2" file="../../models/v2/assets/stand/frame_part2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="stand_part3" file="../../models/v2/assets/stand/frame_part3.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="stand_part4" file="../../models/v2/assets/stand/frame_part4.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="stand_part5" file="../../models/v2/assets/stand/frame_part5.stl" scale="0.001 0.001 0.001"/>
   </asset>
 
   <!-- Shared arm-link style; defined once here so both arm body files can use
@@ -41,32 +47,39 @@
     </default>
   </default>
 
-  <statistic extent="1.3" center="0 0 0.6"/>
+  <statistic extent="1.6" center="0 0 0.8"/>
 
   <worldbody>
-    <!-- Stand mesh, lifted so its feet (min z = -0.2475 m) sit on the floor.
-         Visual-only. Its two side bosses are the arm mounts (measured from the
-         mesh): left face (-0.040,-0.048,0.365) m, right face (0.030,-0.048,0.365),
-         both shifted by the same +0.2475 z lift below. -->
-    <body name="stand" pos="0 0 0.2475">
+    <!-- Stand mesh, lifted so its feet (mesh min z = -0.2139 m) sit on the floor.
+         Visual-only. The small XY offset (+0.0017, -0.0210) re-aligns the new
+         export's mount faces onto exactly where the old frame's were, so the arm
+         bases (below) still bolt to the same spot on the frame - only now 0.5 m
+         higher, because the elongated frame is 0.5 m taller. -->
+    <body name="stand" pos="0.0017 -0.0210 0.2139">
       <geom type="mesh" mesh="stand_part0" contype="0" conaffinity="0" rgba="0.62 0.64 0.68 1"/>
       <geom type="mesh" mesh="stand_part1" contype="0" conaffinity="0" rgba="0.62 0.64 0.68 1"/>
+      <geom type="mesh" mesh="stand_part2" contype="0" conaffinity="0" rgba="0.62 0.64 0.68 1"/>
+      <geom type="mesh" mesh="stand_part3" contype="0" conaffinity="0" rgba="0.62 0.64 0.68 1"/>
+      <geom type="mesh" mesh="stand_part4" contype="0" conaffinity="0" rgba="0.62 0.64 0.68 1"/>
+      <geom type="mesh" mesh="stand_part5" contype="0" conaffinity="0" rgba="0.62 0.64 0.68 1"/>
     </body>
 
     <!-- Both arm base poses RECOVERED by ICP-registering the canonical YAM
          base_link mesh onto the user's CAD export `assembly example both arms.stl`
          (RMS 1.6 / 1.3 mm -> both mounts are this same YAM, hence yam_right_body
          is now real left-geometry, not an x-mirror). Each arm bolts to a vertical
-         plate on a Y-face of the upper structure, same height (world z ~0.69).
+         plate on a Y-face of the upper structure, same height. Both z values were
+         raised +0.5 m (0.69 -> 1.19) to track the elongated frame's mount, which
+         is 0.5 m higher; XY/quat are unchanged from the registration.
          LEFT base on the -Y face (joint-1 axis -> world -Y); RIGHT base on the +Y
          face (joint-1 axis -> world +Y) = the left pose rotated 180deg about Z.
          At q=0 each arm points world +Z (up); the per-side home pose in
          sim_yam_bimanual.py (j1 = +/-90 deg) swings them to face FORWARD (world
          -X) instead of reaching apart along +/-Y. quat is (w x y z). -->
-    <body name="left_arm_base" pos="-0.0248 -0.1700 0.6908" quat="0.49791 0.50194 -0.50011 -0.50004">
+    <body name="left_arm_base" pos="-0.0248 -0.1700 1.1908" quat="0.49791 0.50194 -0.50011 -0.50004">
       <include file="../../models/v2/mjcf/yam_left_body.xml"/>
     </body>
-    <body name="right_arm_base" pos="0.0101 0.0801 0.6875" quat="0.49989 0.49988 0.50055 0.49968">
+    <body name="right_arm_base" pos="0.0101 0.0801 1.1875" quat="0.49989 0.49988 0.50055 0.49968">
       <include file="../../models/v2/mjcf/yam_right_body.xml"/>
     </body>
   </worldbody>
